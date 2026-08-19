@@ -1,0 +1,399 @@
+# Importación de las librerías necesarias.
+# Si necesita usar más librerías agreguelas en este espacio para mantener su código organizado.
+import glob
+import os
+import numpy as np
+
+import json
+
+import matplotlib.pyplot as plt
+from skimage.io import imread
+import cv2
+
+
+list_train = glob.glob(os.path.join('data_mp1', 'BCCD', 'train', '*.jpg')) # variable que tendrá la lista de las imagenes de la carpeta de train
+list_val = glob.glob(os.path.join('data_mp1', 'BCCD', 'valid', '*.jpg')) # variable que tendrá la lista de las imagenes de la carpeta de val
+list_test = glob.glob(os.path.join('data_mp1', 'BCCD', 'test', '*.jpg')) # variable que tendrá la lista de las imagenes de la carpeta de test
+
+
+list_train.sort()
+list_val.sort()
+list_test.sort()
+
+# pruebas basicas de funcionamiento correcto de la función
+assert(len(list_train)!=0), 'Su lista esta vacia'
+assert(len(list_val)!=0), 'Su lista esta vacia' 
+assert(len(list_test)!=0), 'Su lista esta vacia' 
+
+
+assert(np.isclose(len(list_train),224,0.1)), 'La cantidad de datos en su lista de entrenamiento es erroneo'
+assert(np.isclose(len(list_val),65,0.1)), 'La cantidad de datos en su lista de validacion es erroneo'
+assert(np.isclose(len(list_test),31,0.1)), 'La cantidad de datos en su lista de test es erroneo'
+
+
+assert (os.path.join('data_mp1','BCCD','train','BloodImage_00001_jpg.rf.ee79407f4ce4abd4fc56f42c176d324b.jpg') in list_train) \
+or (os.path.join('.', 'data_mp1','BCCD','train','BloodImage_00001_jpg.rf.ee79407f4ce4abd4fc56f42c176d324b.jpg') in list_train), 'Su lista de entrenamiento no tiene los datos correctos'
+assert (os.path.join('data_mp1','BCCD','valid','BloodImage_00000_jpg.rf.cf90db4f6c7327631ae0d822bab81d5f.jpg') in list_val) \
+or (os.path.join('.', 'data_mp1','BCCD','valid','BloodImage_00000_jpg.rf.cf90db4f6c7327631ae0d822bab81d5f.jpg') in list_val), 'Su lista de validacion no tiene los datos correctos'
+assert (os.path.join('data_mp1','BCCD','test','BloodImage_00038_jpg.rf.03231bab33fddc4fabbb488a9d458343.jpg') in list_test) \
+or (os.path.join('.', 'data_mp1','BCCD','valid','BloodImage_00000_jpg.rf.cf90db4f6c7327631ae0d822bab81d5f.jpg') in list_val), 'Su lista de test no tiene los datos correctos'
+
+
+fig, ax = plt.subplots(1,2) 
+# Usen esta notación para hacer los subplots 
+# (recuerden que para acceder a cada elemento se puede hacer como si fuera un array: ax[idx])
+
+
+imagen1= imread(list_train[0])
+ax[0].imshow(imagen1)
+ax[0].axis('off')
+
+imagen2= imread(list_train[1])
+ax[1].imshow(imagen2)
+ax[1].axis('off')
+
+
+assert(not ax[1].axison), 'No apago los ejes de la image 1'
+assert(not ax[0].axison), 'No apago los ejes de la image 0'
+
+
+dict_train = '' # variable que tendrá el diccionario de las anotaciones de la carpeta de train
+dict_val = '' # variable que tendrá el diccionario de las anotaciones de la carpeta de val
+dict_test = '' # variable que tendrá el diccionario de las anotaciones de la carpeta de test
+
+with open(os.path.join('data_mp1', 'BCCD', 'train', '_annotations.coco.json')) as f:
+    dict_train = json.load(f)
+
+with open(os.path.join('data_mp1', 'BCCD', 'valid', '_annotations.coco.json')) as f:
+    dict_val = json.load(f) 
+    
+with open(os.path.join('data_mp1', 'BCCD', 'test', '_annotations.coco.json')) as f:
+    dict_test = json.load(f)
+    
+
+
+# Utilicen esta celda para poder imprimir y explorar las anotaciones.
+print(type(dict_train))
+print(type(dict_val))
+print(type(dict_test))
+print(dict_train.keys())
+print(dict_train.values())
+print(dict_val.keys())
+print(dict_val.values())
+print(dict_test.keys())
+print(dict_test.values())
+
+
+assert(type(dict_train)==dict), 'Las anotaciones deben ser un diccionario'
+assert(type(dict_val)==dict), 'Las anotaciones deben ser un diccionario'
+assert(type(dict_test)==dict), 'Las anotaciones deben ser un diccionario'
+
+assert 'images' in dict_train.keys(), 'Las anotaciones deben tener la llave images'
+assert 'images' in dict_val.keys(), 'Las anotaciones deben tener la llave images'
+assert 'images' in dict_test.keys(), 'Las anotaciones deben tener la llave images'
+
+
+assert(np.isclose(len(dict_train['images']), len(list_train))), 'La cantidad de imagenes de anotacion deben ser iguales que las de la base de datos'
+assert(np.isclose(len(dict_val['images']), len(list_val))), 'La cantidad de imagenes de anotacion deben ser iguales que las de la base de datos'
+assert(np.isclose(len(dict_test['images']), len(list_test))), 'La cantidad de imagenes de anotacion deben ser iguales que las de la base de datos'
+
+
+def Graficar_bbox(dict_anotaciones, path):
+
+    imagen= imread(path)
+    id_imagen= None
+    nombre_imagen = os.path.basename(path)
+    for img in dict_anotaciones['images']:
+        if img['file_name']==nombre_imagen:
+            id_imagen=img['id']
+    
+    bbox=None
+    for anotacion in dict_anotaciones['annotations']:
+        if anotacion['image_id']==id_imagen and anotacion['category_id']==3:
+            bbox= anotacion['bbox']
+    
+    x = int(bbox[0])
+    y = int(bbox[1])
+    w = int(bbox[2])
+    h = int(bbox[3])
+    
+    img_bbox= cv2.rectangle(imagen,(x,y),(x+w,y+h),(255,0,0),2)
+            
+    
+    return img_bbox,bbox
+
+
+plt.rcParams['figure.figsize'] = [10, 20] # por cuestiones de visualización vamos a alterar este parametro
+fig, ax = plt.subplots(4,2)#filas,#columnas
+ax[0,0].set_title('Imagen \n sin anotación')
+ax[0,1].set_title('Imagen \n con anotación')
+#dudas
+for i in range(4):
+    image = imread(list_train[i])
+    image_bbox, bbox = Graficar_bbox(dict_train, list_train[i])
+
+    ax[i,0].imshow(image)
+    ax[i,0].axis('off')
+
+    ax[i,1].imshow(image_bbox)
+    ax[i,1].axis('off')
+
+plt.show()
+
+
+for i in range(4):
+    for j in range(2):
+        assert(not ax[i,j].axison), 'Los ejes deben estar apagados'
+assert(np.shape(ax) == (4,2)), 'EL subplot no es 4,2'
+
+
+bbox=Graficar_bbox(dict_train,list_train[0])[1]
+assert bbox[0]==44, 'su coordenada de filas de la esquina es erronea'
+assert bbox[1]==273, 'su coordenada de columnas de la esquina es erronea'
+assert bbox[2]==142, 'El ancho de la caja es erroneo'
+assert bbox[3]==142, 'El alto de la caja es erroneo'
+
+
+plt.rcParams['figure.figsize'] = [10, 10] # por cuestiones de visualización vamos a alterar este parametro
+fig,ax=plt.subplots(4,4)
+
+for i in range(4):
+    image = imread(list_train[i])
+
+    ax[i, 0].imshow(image)
+    ax[i, 0].set_title('Original')
+    ax[i, 0].axis('off')
+
+    ax[i, 1].imshow(image[:, :, 0], cmap='gray')
+    ax[i, 1].set_title('Canal R')
+    ax[i, 1].axis('off')
+
+    ax[i, 2].imshow(image[:, :, 1], cmap='gray')
+    ax[i, 2].set_title('Canal G')
+    ax[i, 2].axis('off')
+
+    ax[i, 3].imshow(image[:, :, 2], cmap='gray')
+    ax[i, 3].set_title('Canal B')
+    ax[i, 3].axis('off')
+
+plt.show()
+
+
+
+assert(np.shape(ax) == (4,4)), 'El subplot debe ser 4x4'
+
+for i in range(4):
+    for j in range(4):
+        assert(not ax[i,j].axison), 'Los ejes deben estar apagados'
+
+
+# Por favor no modificar la imagen. Si la modifican pueden tener errores luego.
+img=imread(list_train[0])
+
+
+new_im=img[:,:,2]>215 #imagen umbralizada de la segunda forma
+plt.imshow(new_im,cmap='gray')
+plt.axis('off')
+plt.show()
+
+
+
+assert np.isclose(np.sum(new_im),5708) or np.isclose(np.sum(new_im), 5597), 'La umbralización es erronea'
+
+
+segmentation = cv2.inRange(img, (195, 200, 195), (255, 255, 255))
+
+plt.imshow(segmentation, cmap='gray')
+plt.axis('off')
+plt.show()
+
+
+assert np.sum(segmentation) > 0, 'La segmentación es erronea'
+
+
+train_images = len(list_train)# variable que tendrá el numero de imagenes en la carpeta de entrenamiento
+val_images = len(list_val) # variable que tendrá el numero de imagenes en la carpeta de validacion
+test_images = len(list_test) # variable que tendrá el numero de imagenes en la carpeta de prueba
+
+train_anots_1 = 0 # variable que tendrá el numero de anotaciones de la clase 1 en la carpeta de entrenamiento
+val_anots_1 = 0 # variable que tendrá el numero de anotaciones de la clase 1 en la carpeta de validacion
+test_anots_1 = 0 # variable que tendrá el numero de anotaciones de la clase 1 en la carpeta de prueba
+
+train_anots_2 = 0 # variable que tendrá el numero de anotaciones de la clase 2 en la carpeta de entrenamiento
+val_anots_2 = 0 # variable que tendrá el numero de anotaciones de la clase 2 en la carpeta de validacion
+test_anots_2 = 0 # variable que tendrá el numero de anotaciones de la clase 2 en la carpeta de prueba
+
+train_anots_3 = 0 # variable que tendrá el numero de anotaciones de la clase 3 en la carpeta de entrenamiento
+val_anots_3 = 0 # variable que tendrá el numero de anotaciones de la clase 3 en la carpeta de validacion
+test_anots_3 = 0# variable que tendrá el numero de anotaciones de la clase 3 en la carpeta de prueba
+
+for anotacion in dict_train['annotations']:
+    if anotacion['category_id'] == 1:
+        train_anots_1 += 1
+    elif anotacion['category_id'] == 2:
+        train_anots_2 += 1
+    elif anotacion['category_id'] == 3:
+        train_anots_3 += 1
+
+for anotacion in dict_val['annotations']:
+    if anotacion['category_id'] == 1:
+        val_anots_1 += 1
+    elif anotacion['category_id'] == 2:
+        val_anots_2 += 1
+    elif anotacion['category_id'] == 3:
+        val_anots_3 += 1
+
+for anotacion in dict_test['annotations']:
+    if anotacion['category_id'] == 1:
+        test_anots_1 += 1
+    elif anotacion['category_id'] == 2:
+        test_anots_2 += 1
+    elif anotacion['category_id'] == 3:
+        test_anots_3 += 1
+
+
+min_train_anots_3= 0 # variable que tendrá el minimo de elementos de la clase 3 en una imagen en entrenamiento
+min_val_anots_3= 0 # variable que tendrá el minimo de elementos de la clase 3 en una imagen en validacion
+min_test_anots_3= 0 # variable que tendrá el minimo de elementos de la clase 3 en una imagen en prueba
+
+train_class3 = []
+
+for anotacion in dict_train['annotations']:
+    if anotacion['category_id'] == 3:
+        train_class3.append(anotacion)
+
+val_class3 = []
+
+for anotacion in dict_val['annotations']:
+    if anotacion['category_id'] == 3:
+        val_class3.append(anotacion)
+
+test_class3 = []
+
+for anotacion in dict_test['annotations']:
+    if anotacion['category_id'] == 3:
+        test_class3.append(anotacion)
+
+
+train_count = np.zeros(len(list_train))
+val_count = np.zeros(len(list_val))
+test_count = np.zeros(len(list_test))
+
+
+for anotacion in train_class3:
+    image_id = anotacion['image_id']
+    train_count[image_id] += 1
+
+for anotacion in val_class3:
+    image_id = anotacion['image_id']
+    val_count[image_id] += 1
+
+for anotacion in test_class3:
+    image_id = anotacion['image_id']
+    test_count[image_id] += 1
+
+
+min_train_anots_3 = np.min(train_count)
+min_val_anots_3 = np.min(val_count)
+min_test_anots_3 = np.min(test_count)
+
+
+max_train_anots_3= np.max(train_count) # variable que tendrá el maximo de elementos de la clase 3 en una imagen en entrenamiento
+max_val_anots_3= np.max(val_count) # variable que tendrá el maximo de elementos de la clase 3 en una imagen en validacion
+max_test_anots_3= np.max(test_count) # variable que tendrá el maximo de elementos de la clase 3 en una imagen en prueba
+
+
+
+assert type(train_images)==int, 'El numero de imagenes de entrenamiento deberia ser entero'
+assert type(val_images)==int, 'El numero de imagenes de validacion deberia ser entero'
+assert type(test_images)==int, 'El numero de imagenes de test deberia ser entero'
+
+assert type(train_anots_1)==int, 'El numero de anotaciones de entrenamiento deberia ser entero'
+assert type(val_anots_1)==int, 'El numero de anotaciones de validacion deberia ser entero'
+assert type(test_anots_1)==int, 'El numero de anotaciones de test deberia ser entero'
+
+print ("{:<8}             | {:<15} {:<20}".format('Fold','Total images','Total annotations'))
+print ('----------------------------------------------------------------------------')
+print ("{:<20} | {:<15} {:<20}".format('Train category 1',train_images,train_anots_1))
+print ("{:<20} | {:<15} {:<20}".format('Valid category 1',val_images,val_anots_1))
+print ("{:<20} | {:<15} {:<20}".format('Test category 1',test_images,test_anots_1))
+
+assert train_images<train_anots_1, 'Deberían haber mas anotaciones de la clase 1 en entrenamiento que el total de imagenes'
+assert val_images<val_anots_1, 'Deberían haber mas anotaciones de la clase 1 en entrenamiento que el total de imagenes'
+assert test_images>test_anots_1, 'Deberían haber menos anotaciones de la clase 1 en entrenamiento que el total de imagenes'
+
+assert np.isclose(train_anots_1*val_anots_1*test_anots_1,397800), 'Algun valor de la cantidad de anotaciones esta mal'
+
+
+assert type(train_anots_2)==int, 'El numero de anotaciones de entrenamiento deberia ser entero'
+assert type(val_anots_2)==int, 'El numero de anotaciones de validacion deberia ser entero'
+assert type(test_anots_2)==int, 'El numero de anotaciones de test deberia ser entero'
+
+print ("{:<8}             | {:<15} {:<20}".format('Fold','Total images','Total annotations'))
+print ('----------------------------------------------------------------------------')
+print ("{:<20} | {:<15} {:<20}".format('Train category 2',train_images,train_anots_2))
+print ("{:<20} | {:<15} {:<20}".format('Valid category 2',val_images,val_anots_2))
+print ("{:<20} | {:<15} {:<20}".format('Test category 2',test_images,test_anots_2))
+
+assert train_images<train_anots_2, 'Deberían haber mas anotaciones de la clase 2 en entrenamiento que el total de imagenes'
+assert val_images<val_anots_2, 'Deberían haber mas anotaciones de la clase 2 en entrenamiento que el total de imagenes'
+assert test_images<test_anots_2, 'Deberían haber mas anotaciones de la clase 2 en entrenamiento que el total de imagenes'
+
+assert np.isclose(train_anots_2*val_anots_2*test_anots_2,670077408), 'Algun valor de la cantidad de anotaciones esta mal'
+
+
+assert type(train_anots_3)==int, 'El numero de anotaciones de entrenamiento deberia ser entero'
+assert type(val_anots_3)==int, 'El numero de anotaciones de validacion deberia ser entero'
+assert type(test_anots_3)==int, 'El numero de anotaciones de test deberia ser entero'
+
+print ("{:<8}             | {:<15} {:<20} {:<20} {:<20}".format('Fold','Total images','Total annotations', 'Min annotations', 'Max annotations'))
+print ('----------------------------------------------------------------------------')
+print ("{:<20} | {:<15} {:<20} {:<20} {:<20}".format('Train category 3',train_images,train_anots_3,min_train_anots_3,max_train_anots_3))
+print ("{:<20} | {:<15} {:<20} {:<20} {:<20}".format('Valid category 3',val_images,val_anots_3,min_val_anots_3,max_val_anots_3))
+print ("{:<20} | {:<15} {:<20} {:<20} {:<20}".format('Test category 3',test_images,test_anots_3,min_test_anots_3,max_test_anots_3))
+
+assert train_images<train_anots_3, 'Deberían haber mas anotaciones de la clase 3 en entrenamiento que el total de imagenes'
+assert val_images==val_anots_3, 'Deberían haber igual cantidad de anotaciones de la clase 3 en entrenamiento que el total de imagenes'
+assert test_images<test_anots_3, 'Deberían haber mas anotaciones de la clase 3 en entrenamiento que el total de imagenes'
+
+assert np.isclose(train_anots_3*val_anots_3*test_anots_3,486720), 'Algun valor de la cantidad de anotaciones esta mal'
+
+assert min_train_anots_3+min_val_anots_3+min_test_anots_3==2, 'Algun valor de minimo esta mal'
+assert max_train_anots_3+max_val_anots_3+max_test_anots_3==6, 'Algun valor de maximo esta mal'
+
+
+sets = ['Train', 'Validación', 'Test']
+imagenes = [train_images, val_images, test_images]
+
+plt.figure(figsize=(8,5))
+plt.bar(sets, imagenes)
+plt.ylabel('Número de imágenes')
+plt.xlabel('Conjunto')
+plt.title('Número de imágenes por conjunto')
+plt.show()
+
+
+clase1 = [train_anots_1, val_anots_1, test_anots_1]
+clase2 = [train_anots_2, val_anots_2, test_anots_2]
+clase3 = [train_anots_3, val_anots_3, test_anots_3]
+
+x = np.arange(len(sets))
+ancho = 0.25
+
+plt.figure(figsize=(8,5))
+plt.bar(x - ancho, clase1, ancho, label='Clase 1')
+plt.bar(x, clase2, ancho, label='Clase 2')
+plt.bar(x + ancho, clase3, ancho, label='Clase 3')
+
+plt.xticks(x, sets)
+plt.ylabel('Número de anotaciones')
+plt.xlabel('Conjunto')
+plt.title('Distribución de anotaciones por clase')
+plt.legend()
+plt.show()
+
+
+from utils import *
+converter("Entrega 1")
+
+
